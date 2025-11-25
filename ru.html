@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ロシア語 キリル文字 読み方テスト</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            text-align: center;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        #section-title {
+            color: #d9534f;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+        #word-display {
+            font-size: 3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            line-height: 1.2;
+        }
+        #meaning-display {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        .options button {
+            display: block;
+            width: 80%;
+            margin: 10px auto;
+            padding: 15px;
+            font-size: 1.1em;
+            cursor: pointer;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            background-color: #fff;
+            color: #007bff;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .options button:hover:not(:disabled) {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .result {
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 1.5em;
+        }
+        .correct {
+            color: green;
+        }
+        .incorrect {
+            color: red;
+        }
+        #score {
+            margin-top: 20px;
+            font-size: 1.1em;
+            color: #333;
+        }
+        #next-section-button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            margin-top: 20px;
+            padding: 15px 30px;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+        .disabled {
+            cursor: default !important;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📚 ロシア語 読み方テスト</h1>
+    
+    <div id="score">正解: 0 / 全問: 0</div>
+    <hr>
+    
+    <h2 id="section-title">セクション 1 / 10問中 0問目</h2>
+    
+    <p id="meaning-display"></p>
+    <div id="word-display"></div>
+    
+    <div class="options" id="options-container">
+        </div>
+    
+    <div class="result" id="result-message"></div>
+</div>
+
+<script>
+    // -----------------------------------------------------
+    // 200語の単語リスト (ここから)
+    // -----------------------------------------------------
+    const masterWords = [
+    // --- 挨拶・基本表現 (1-10) ---
+    { russian: "да", reading: "ダー", meaning: "はい" },
+    { russian: "нет", reading: "ニェット", meaning: "いいえ" },
+    { russian: "привет", reading: "プリヴィェート", meaning: "やあ/こんにちは (カジュアル)" },
+    { russian: "здравствуйте", reading: "ズドラーストヴイチェ", meaning: "こんにちは (丁寧)" },
+    { russian: "до свидания", reading: "ダ スヴィダーニャ", meaning: "さようなら" },
+    { russian: "спасибо", reading: "スパシーバ", meaning: "ありがとう" },
+    { russian: "пожалуйста", reading: "パジャールスタ", meaning: "どうぞ/お願いします" },
+    { russian: "извините", reading: "イズヴィニーチェ", meaning: "すみません/ごめんなさい" },
+    { russian: "хорошо", reading: "ハラショー", meaning: "良い/わかった" },
+    { russian: "как", reading: "カーク", meaning: "どのように" },
+
+    // --- 人称代名詞・家族・人 (11-30) ---
+    { russian: "я", reading: "ヤー", meaning: "私" },
+    { russian: "ты", reading: "トィー", meaning: "君 (カジュアルな二人称単数)" },
+    { russian: "вы", reading: "ヴイ", meaning: "あなた (丁寧)/あなたたち" },
+    { russian: "он", reading: "オン", meaning: "彼" },
+    { russian: "она", reading: "アナ", meaning: "彼女" },
+    { russian: "оно", reading: "アノー", meaning: "それ (中性)" },
+    { russian: "мы", reading: "ムィー", meaning: "私たち" },
+    { russian: "они", reading: "アニー", meaning: "彼ら/彼女ら" },
+    { russian: "мой", reading: "モーイ", meaning: "私の" },
+    { russian: "твой", reading: "トヴォーイ", meaning: "君の (カジュアル)" },
+    { russian: "мама", reading: "マーマ", meaning: "お母さん" },
+    { russian: "папа", reading: "パーパ", meaning: "お父さん" },
+    { russian: "брат", reading: "ブラート", meaning: "兄弟" },
+    { russian: "сестра", reading: "セストゥラー", meaning: "姉妹" },
+    { russian: "сын", reading: "スィン", meaning: "息子" },
+    { russian: "дочь", reading: "ドーチ", meaning: "娘" },
+    { russian: "друг", reading: "ドゥルーク", meaning: "友達" },
+    { russian: "человек", reading: "チェラヴェーク", meaning: "人" },
+    { russian: "имя", reading: "イーミャ", meaning: "名前" },
+    { russian: "женщина", reading: "ジェーンシナ", meaning: "女性" },
+
+    // --- 日常名詞 (31-80) ---
+    { russian: "дом", reading: "ドーム", meaning: "家" },
+    { russian: "квартира", reading: "クヴァルチーラ", meaning: "アパート/マンション" },
+    { russian: "город", reading: "ゴーラト", meaning: "都市" },
+    { russian: "улица", reading: "ウーリツァ", meaning: "通り" },
+    { russian: "машина", reading: "マシーナ", meaning: "車" },
+    { russian: "работа", reading: "ラボーダ", meaning: "仕事" },
+    { russian: "школа", reading: "シコーラ", meaning: "学校" },
+    { russian: "книга", reading: "クニーガ", meaning: "本" },
+    { russian: "стол", reading: "ストール", meaning: "テーブル/机" },
+    { russian: "стул", reading: "ストゥール", meaning: "椅子" },
+    { russian: "окно", reading: "アクノー", meaning: "窓" },
+    { russian: "дверь", reading: "ドヴェーリ", meaning: "ドア" },
+    { russian: "день", reading: "ヂェーニ", meaning: "日" },
+    { russian: "ночь", reading: "ノーチ", meaning: "夜" },
+    { russian: "утро", reading: "ウートラ", meaning: "朝" },
+    { russian: "вечер", reading: "ヴェーチェル", meaning: "夕方/晩" },
+    { russian: "год", reading: "ゴート", meaning: "年" },
+    { russian: "время", reading: "ヴリェーミャ", meaning: "時間" },
+    { russian: "вода", reading: "ヴァダー", meaning: "水" },
+    { russian: "хлеб", reading: "フリェープ", meaning: "パン" },
+    { russian: "молоко", reading: "マラコー", meaning: "牛乳" },
+    { russian: "чай", reading: "チャーイ", meaning: "お茶" },
+    { russian: "кофе", reading: "コーフィ", meaning: "コーヒー" },
+    { russian: "мясо", reading: "ミャーサ", meaning: "肉" },
+    { russian: "рыба", reading: "ルィーバ", meaning: "魚" },
+    { russian: "фрукт", reading: "フルークト", meaning: "果物" },
+    { russian: "овощ", reading: "オーヴァシ", meaning: "野菜" },
+    { russian: "деньги", reading: "ヂェーニギ", meaning: "お金" },
+    { russian: "рубль", reading: "ルーブリ", meaning: "ルーブル" },
+    { russian: "магазин", reading: "マガズィーン", meaning: "店" },
+    { russian: "почта", reading: "ポーチタ", meaning: "郵便局" },
+    { russian: "банк", reading: "バーンク", meaning: "銀行" },
+    { russian: "телефон", reading: "テリフォン", meaning: "電話" },
+    { russian: "компьютер", reading: "カムピューテル", meaning: "コンピューター" },
+    { russian: "письмо", reading: "ピスモー", meaning: "手紙" },
+    { russian: "слово", reading: "スローヴァ", meaning: "単語/言葉" },
+    { russian: "язык", reading: "イズィーク", meaning: "言語/舌" },
+    { russian: "мир", reading: "ミール", meaning: "世界/平和" },
+    { russian: "жизнь", reading: "ジーズニ", meaning: "人生" },
+    { russian: "любовь", reading: "リュボーフィ", meaning: "愛" },
+    { russian: "радость", reading: "ラードスチ", meaning: "喜び" },
+    { russian: "страна", reading: "ストゥラナー", meaning: "国" },
+    { russian: "россия", reading: "ラシーヤ", meaning: "ロシア" },
+    { russian: "япония", reading: "ヤポーニヤ", meaning: "日本" },
+    { russian: "центр", reading: "ツェーントル", meaning: "中心" },
+    { russian: "право", reading: "プラーヴァ", meaning: "右" },
+    { russian: "лево", reading: "リェーヴァ", meaning: "左" },
+    { russian: "север", reading: "スィェーヴェル", meaning: "北" },
+    { russian: "юг", reading: "ユーク", meaning: "南" },
+    { russian: "запад", reading: "ザーパト", meaning: "西" },
+
+    // --- 動詞 (81-130) ---
+    { russian: "быть", reading: "ブィーチ", meaning: "〜である (不定形)" },
+    { russian: "есть", reading: "イェースチ", meaning: "食べる" },
+    { russian: "пить", reading: "ピーチ", meaning: "飲む" },
+    { russian: "говорить", reading: "ガヴァリーチ", meaning: "話す" },
+    { russian: "сказать", reading: "スカザーチ", meaning: "言う (完)" },
+    { russian: "знать", reading: "ズナーチ", meaning: "知っている" },
+    { russian: "понимать", reading: "パニマーチ", meaning: "理解する" },
+    { russian: "читать", reading: "チターチ", meaning: "読む" },
+    { russian: "писать", reading: "ピサーチ", meaning: "書く" },
+    { russian: "смотреть", reading: "スマト(リェー)チ", meaning: "見る" },
+    { russian: "видеть", reading: "ヴィーヂェチ", meaning: "見える" },
+    { russian: "слушать", reading: "スルーシャチ", meaning: "聞く" },
+    { russian: "слышать", reading: "スルーシャチ", meaning: "聞こえる" },
+    { russian: "жить", reading: "ジィーチ", meaning: "生きる/住む" },
+    { russian: "работать", reading: "ラバータチ", meaning: "働く" },
+    { russian: "учиться", reading: "ウチーッツァ", meaning: "学ぶ/勉強する" },
+    { russian: "делать", reading: "ヂェーラチ", meaning: "する/作る" },
+    { russian: "купить", reading: "クピーチ", meaning: "買う (完)" },
+    { russian: "продавать", reading: "プラダヴァーチ", meaning: "売る" },
+    { russian: "любить", reading: "リュビーチ", meaning: "愛する" },
+    { russian: "хотеть", reading: "ハチェーチ", meaning: "欲する" },
+    { russian: "мочь", reading: "モーチ", meaning: "できる" },
+    { russian: "ехать", reading: "イェーハチ", meaning: "行く/乗る (乗り物、不定)" },
+    { russian: "идти", reading: "イチー", meaning: "行く (徒歩、不定)" },
+    { russian: "стоять", reading: "スタヤーチ", meaning: "立っている" },
+    { russian: "сидеть", reading: "スィヂェーチ", meaning: "座っている" },
+    { russian: "лежать", reading: "リジャチ", meaning: "横たわっている" },
+    { russian: "спать", reading: "スパーチ", meaning: "眠る" },
+    { russian: "отдыхать", reading: "アッドィハーチ", meaning: "休む" },
+    { russian: "ждать", reading: "ジュダーチ", meaning: "待つ" },
+    { russian: "давать", reading: "ダヴァーチ", meaning: "与える" },
+    { russian: "брать", reading: "ブラーチ", meaning: "取る" },
+    { russian: "начинать", reading: "ナチナーチ", meaning: "始める" },
+    { russian: "кончать", reading: "カンチャーチ", meaning: "終える" },
+    { russian: "помогать", reading: "パマガ―チ", meaning: "助ける" },
+    { russian: "искать", reading: "イスカーチ", meaning: "探す" },
+    { russian: "находить", reading: "ナハヂーチ", meaning: "見つける" },
+    { russian: "думать", reading: "ドゥーマチ", meaning: "考える" },
+    { russian: "показывать", reading: "パカーズィヴァチ", meaning: "見せる" },
+    { russian: "открывать", reading: "アトゥクルィヴァーチ", meaning: "開ける" },
+    { russian: "закрывать", reading: "ザクルィヴァーチ", meaning: "閉める" },
+    { russian: "платить", reading: "プラチーチ", meaning: "支払う" },
+    { russian: "помнить", reading: "ポームニチ", meaning: "覚えている" },
+    { russian: "забывать", reading: "ザブィヴァーチ", meaning: "忘れる" },
+    { russian: "завтракать", reading: "ザーフトラカチ", meaning: "朝食をとる" },
+    { russian: "обедать", reading: "アベーダチ", meaning: "昼食をとる" },
+    { russian: "ужинать", reading: "ウージナチ", meaning: "夕食をとる" },
+    { russian: "заниматься", reading: "ザニマーッツァ", meaning: "従事する/勉強する" },
+    { russian: "гулять", reading: "グリャーチ", meaning: "散歩する" },
+    { russian: "путешествовать", reading: "プチシェーストヴァチ", meaning: "旅行する" },
+
+    // --- 形容詞・副詞 (131-170) ---
+    { russian: "большой", reading: "バリショーイ", meaning: "大きい" },
+    { russian: "маленький", reading: "マーリェンキイ", meaning: "小さい" },
+    { russian: "новый", reading: "ノーヴィイ", meaning: "新しい" },
+    { russian: "старый", reading: "スタールィイ", meaning: "古い" },
+    { russian: "горячий", reading: "ガリャーチイ", meaning: "熱い" },
+    { russian: "холодный", reading: "ハローdnィイ", meaning: "冷たい" },
+    { russian: "трудный", reading: "ト(ルード)ヌィイ", meaning: "難しい" },
+    { russian: "легкий", reading: "リョーフキイ", meaning: "簡単な/軽い" },
+    { russian: "красивый", reading: "クラシーヴィイ", meaning: "美しい/きれいな" },
+    { russian: "умный", reading: "ウームヌィイ", meaning: "賢い" },
+    { russian: "добрый", reading: "ドーブルィイ", meaning: "親切な/優しい" },
+    { russian: "плохой", reading: "プラーホーイ", meaning: "悪い" },
+    { russian: "быстро", reading: "ブィーストラ", meaning: "速く (副詞)" },
+    { russian: "медленно", reading: "ミェードリェンナ", meaning: "ゆっくりと (副詞)" },
+    { russian: "громко", reading: "グロームカ", meaning: "大声で (副詞)" },
+    { russian: "тихо", reading: "チーハ", meaning: "静かに (副詞)" },
+    { russian: "здесь", reading: "ズヂェーシ", meaning: "ここに" },
+    { russian: "там", reading: "タム", meaning: "あそこに" },
+    { russian: "всегда", reading: "フスィグダー", meaning: "いつも" },
+    { russian: "никогда", reading: "ニカグダー", meaning: "決して～ない" },
+    { russian: "сейчас", reading: "スィイチャース", meaning: "今" },
+    { russian: "потом", reading: "パトーム", meaning: "後で" },
+    { russian: "рано", reading: "ラーナ", meaning: "早く" },
+    { russian: "поздно", reading: "ポーzドナ", meaning: "遅く" },
+    { russian: "очень", reading: "オーチェニ", meaning: "とても" },
+    { russian: "немного", reading: "ニェムノーガ", meaning: "少し" },
+    { russian: "много", reading: "ムノーガ", meaning: "多く" },
+    { russian: "каждый", reading: "カーzhドィイ", meaning: "各々の" },
+    { russian: "следующий", reading: "スリェードゥユシィイ", meaning: "次の" },
+    { russian: "первый", reading: "ピェールヴィイ", meaning: "最初の" },
+    { russian: "последний", reading: "パスリェーdニイ", meaning: "最後の" },
+    { russian: "главный", reading: "グラーヴヌィイ", meaning: "主要な/主要人物" },
+    { russian: "интересный", reading: "インチェリェースヌィイ", meaning: "面白い" },
+    { russian: "скучный", reading: "スクーチヌィイ", meaning: "退屈な" },
+    { russian: "счастливый", reading: "スチスリィーヴィイ", meaning: "幸せな" },
+    { russian: "грустный", reading: "グルースヌィイ", meaning: "悲しい" },
+    { russian: "чистый", reading: "チーストゥィイ", meaning: "きれいな/清潔な" },
+    { russian: "грязный", reading: "グリャーzヌィイ", meaning: "汚い" },
+    { russian: "дорогой", reading: "ダラゴーイ", meaning: "高価な/親愛なる" },
+    { russian: "дешёвый", reading: "ヂシャヨーヴィイ", meaning: "安価な" },
+
+    // --- 前置詞・接続詞・その他 (171-200) ---
+    { russian: "и", reading: "イー", meaning: "と (接続詞)" },
+    { russian: "но", reading: "ノー", meaning: "しかし" },
+    { russian: "или", reading: "イーリ", meaning: "または" },
+    { russian: "что", reading: "シトー", meaning: "何 (疑問詞)/〜ということ (接続詞)" },
+    { russian: "кто", reading: "クトー", meaning: "誰" },
+    { russian: "где", reading: "グヂェ", meaning: "どこに/どこで" },
+    { russian: "когда", reading: "カグダー", meaning: "いつ" },
+    { russian: "почему", reading: "パチムー", meaning: "なぜ" },
+    { russian: "потому что", reading: "パタムー シタ", meaning: "なぜなら" },
+    { russian: "как", reading: "カーク", meaning: "どのように/〜として" },
+    { russian: "в", reading: "ヴ", meaning: "〜の中に (前置詞)" },
+    { russian: "на", reading: "ナ", meaning: "〜の上に (前置詞)" },
+    { russian: "с", reading: "ス", meaning: "〜と一緒に (前置詞)" },
+    { russian: "без", reading: "ビェス", meaning: "〜なしで (前置詞)" },
+    { russian: "до", reading: "ド", meaning: "〜まで (前置詞)" },
+    { russian: "от", reading: "オト", meaning: "〜から (前置詞)" },
+    { russian: "для", reading: "ドゥリャ", meaning: "〜のために (前置詞)" },
+    { russian: "за", reading: "ザ", meaning: "〜の後ろに/〜のために (前置詞)" },
+    { russian: "под", reading: "ポト", meaning: "〜の下に (前置詞)" },
+    { russian: "около", reading: "オーカラ", meaning: "〜の近くに (前置詞)" },
+    { russian: "перед", reading: "ピェーレト", meaning: "〜の前に (前置詞)" },
+    { russian: "это", reading: "エータ", meaning: "これ (指示代名詞)" },
+    { russian: "тот", reading: "トート", meaning: "あの (指示代名詞)" },
+    { russian: "такой", reading: "タコーイ", meaning: "そのような" },
+    { russian: "весь", reading: "ヴェーシ", meaning: "全部の" },
+    { russian: "несколько", reading: "ニェーシカリカ", meaning: "いくつかの" },
+    { russian: "один", reading: "アヂーン", meaning: "一 (数詞)" },
+    { russian: "два", reading: "ドヴァー", meaning: "二 (数詞)" },
+    { russian: "три", reading: "トゥリ", meaning: "三 (数詞)" },
+    { russian: "четыре", reading: "チトィーリェ", meaning: "四 (数詞)" }
+    ];
+    // -----------------------------------------------------
+
+    const MAX_QUESTIONS_PER_SECTION = 10;
+    
+    let words = []; // masterWordsをシャッフルした後のリスト
+    let currentWordIndex = -1; // words配列の現在のインデックス
+    let correctCount = 0;    // 全体の正解数
+    let totalQuestions = 0;  // 全体の解答数
+    let questionCount = 0;   // 現セクションの解答数 (1〜10)
+    let sectionNumber = 1;   // 現在のセクション番号
+    let lastSectionCorrect = 0; 
+
+    // 🌟 全ての要素を確実に取得
+    const wordDisplay = document.getElementById('word-display');
+    const meaningDisplay = document.getElementById('meaning-display');
+    const optionsContainer = document.getElementById('options-container');
+    const resultMessage = document.getElementById('result-message');
+    const scoreDisplay = document.getElementById('score');
+    const sectionTitle = document.getElementById('section-title'); 
+
+
+    // 配列をシャッフルする関数 (Fisher-Yates)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    // 次の問題をセット
+    function nextQuestion() {
+        if (questionCount >= MAX_QUESTIONS_PER_SECTION) {
+            endSection();
+            return;
+        }
+
+        if (currentWordIndex >= words.length - 1) {
+            if (masterWords.length < 3) {
+                 resultMessage.textContent = '単語リストを3つ以上用意してください。';
+                 return;
+            }
+            words = [...masterWords]; 
+            shuffleArray(words);
+            currentWordIndex = -1;
+        }
+        
+        currentWordIndex++;
+        questionCount++;
+        
+        const currentWord = words[currentWordIndex];
+
+        resultMessage.textContent = '';
+        optionsContainer.innerHTML = '';
+        sectionTitle.textContent = `セクション ${sectionNumber} / 10問中 ${questionCount}問目`;
+
+        wordDisplay.textContent = currentWord.russian;
+        meaningDisplay.textContent = `意味: ${currentWord.meaning}`;
+
+        const correctAnswer = currentWord.reading;
+
+        const incorrectOptions = masterWords
+            .filter(w => w.reading !== correctAnswer)
+            .map(w => w.reading);
+        
+        shuffleArray(incorrectOptions);
+        const dummyOptions = incorrectOptions.slice(0, 2);
+
+        const options = [correctAnswer, ...dummyOptions];
+        shuffleArray(options);
+
+        options.forEach(option => {
+            const button = document.createElement('button');
+            button.textContent = option;
+            if (options.length >= 3) {
+                 button.onclick = () => checkAnswer(option, correctAnswer);
+                 optionsContainer.appendChild(button);
+            }
+        });
+    }
+
+    // 回答をチェック
+    function checkAnswer(selectedOption, correctAnswer) {
+        totalQuestions++; 
+
+        Array.from(optionsContainer.children).forEach(button => {
+            button.disabled = true;
+            button.classList.add('disabled');
+        });
+
+        if (selectedOption === correctAnswer) {
+            resultMessage.textContent = "✅ 正解です！";
+            resultMessage.className = 'result correct';
+            correctCount++;
+            lastSectionCorrect++;
+            Array.from(optionsContainer.children).find(b => b.textContent === correctAnswer).style.backgroundColor = 'lightgreen';
+            Array.from(optionsContainer.children).find(b => b.textContent === correctAnswer).style.borderColor = 'green';
+        } else {
+            resultMessage.textContent = `❌ 不正解... 正解は 「${correctAnswer}」 でした。`;
+            resultMessage.className = 'result incorrect';
+            
+            const selectedButton = Array.from(optionsContainer.children).find(b => b.textContent === selectedOption);
+            if (selectedButton) {
+                selectedButton.style.backgroundColor = 'salmon';
+                selectedButton.style.borderColor = 'red';
+            }
+            
+            const correctButton = Array.from(optionsContainer.children).find(b => b.textContent === correctAnswer);
+            if (correctButton) {
+                correctButton.style.backgroundColor = 'lightgreen';
+                correctButton.style.borderColor = 'green';
+            }
+        }
+        
+        updateScoreDisplay();
+
+        setTimeout(() => {
+            nextQuestion();
+        }, 2000);
+    }
+    
+    // スコア表示を更新
+    function updateScoreDisplay() {
+        scoreDisplay.textContent = `正解: ${correctCount} / 全問: ${totalQuestions}`;
+    }
+
+    // セクション終了処理
+    function endSection() {
+        optionsContainer.innerHTML = '';
+        wordDisplay.textContent = `セクション ${sectionNumber} 完了！`;
+        meaningDisplay.textContent = `この10問で ${lastSectionCorrect} 問正解しました。`; 
+        resultMessage.className = 'result';
+        resultMessage.textContent = '準備ができたら、次のセクションに進んでください。';
+
+        const nextButton = document.createElement('button');
+        nextButton.id = 'next-section-button';
+        nextButton.textContent = '次の10問へ';
+        nextButton.onclick = startNextSection;
+        optionsContainer.appendChild(nextButton);
+    }
+
+    // 次のセクション開始処理
+    function startNextSection() {
+        sectionNumber++;
+        questionCount = 0; 
+        lastSectionCorrect = 0; 
+        nextQuestion();
+    }
+
+
+    // 初期化 (最初のセクションを開始)
+    words = [...masterWords]; 
+    shuffleArray(words); 
+    nextQuestion();
+
+</script>
+
+</body>
+</html>
