@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英単語フラッシュカードアプリ</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            background-color: #f4f7f9;
+            color: #333;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        /* --- 入力画面スタイル --- */
+        #input-screen textarea {
+            width: 98%;
+            min-height: 200px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        #start-button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #start-button:hover {
+            background-color: #218838;
+        }
+
+        /* --- フラッシュカード画面スタイル --- */
+        #card-display {
+            text-align: center;
+            margin: 40px 0;
+            padding: 30px;
+            border: 1px dashed #007bff;
+            border-radius: 6px;
+        }
+        #english-word {
+            font-size: 3em;
+            margin-bottom: 10px;
+            color: #000;
+        }
+        #japanese-meaning {
+            font-size: 1.5em;
+            color: #dc3545;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        #action-buttons button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.3s;
+        }
+        #known-button { background-color: #17a2b8; color: white; }
+        #unknown-button { background-color: #dc3545; color: white; }
+        #next-button { background-color: #007bff; color: white; }
+        #known-button:hover, #unknown-button:hover, #next-button:hover {
+            opacity: 0.8;
+        }
+        #stop-button {
+            margin-top: 20px;
+            background: #6c757d;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+        }
+        .status {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: #6c757d;
+        }
+        .completion-message {
+            text-align: center;
+            padding: 50px 0;
+            font-size: 1.5em;
+            color: #28a745;
+            font-weight: bold;
+        }
+        .example {
+             white-space: pre-wrap;
+             font-family: monospace;
+             background-color: #eee;
+             padding: 10px;
+             border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="app-title">英単語フラッシュカードアプリ</h1>
+
+    <div id="input-screen">
+        <h2>📋 単語リストの入力</h2>
+        <p>以下の形式で、学習したい英単語リストを貼り付けてください。</p>
+        <p><code>英単語&lt;タブ&gt;日本語の訳語</code></p>
+        <div class="example">例:<br>intuition	直感<br>perspective	パースクティブ</div>
+        <textarea id="word-input" placeholder="ここにTSV形式の単語リストを貼り付けてください。"></textarea>
+        <button id="start-button">学習開始</button>
+    </div>
+
+    <div id="flashcard-screen" style="display:none;">
+        
+        <div class="status">
+            ラウンド: <span id="round-counter">0</span> / 進捗: <span id="word-progress">0/0</span>
+        </div>
+
+        <div id="card-display">
+            <h1 id="english-word"></h1> 
+            <p id="japanese-meaning" style="display:none;"></p> 
+        </div>
+
+        <div id="action-buttons" style="text-align: center;">
+            <button id="known-button">知っている</button>
+            <button id="unknown-button">知らない</button>
+            <button id="next-button" style="display:none;">次へ</button>
+        </div>
+
+        <hr>
+        <button id="stop-button">停止して入力画面に戻る</button>
+    </div>
+
+    <div id="completion-screen" style="display:none;">
+        <div class="completion-message">
+            🎉 おめでとうございます！🎉<br>
+            全ての単語を習得しました。
+        </div>
+        <div style="text-align: center;">
+            <button id="reset-button" class="btn btn-success">新しい入力へ戻る</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // =======================================================
+    // 1. 変数定義とDOM要素の取得
+    // =======================================================
+    let allWords = [];       // 全ての単語データと学習状態を保持
+    let currentDeck = [];    // 現在のラウンドで出題する単語リスト
+    let currentIndex = 0;    // currentDeck内の現在出題中のインデックス
+    let roundCount = 0;      // 現在のラウンド数
+    let totalWords = 0;      // 全単語数
+
+    // 画面要素
+    const inputScreenEl = document.getElementById('input-screen');
+    const flashcardScreenEl = document.getElementById('flashcard-screen');
+    const completionScreenEl = document.getElementById('completion-screen');
+    const wordInputEl = document.getElementById('word-input');
+    const startButtonEl = document.getElementById('start-button');
+    const englishWordEl = document.getElementById('english-word');
+    const japaneseMeaningEl = document.getElementById('japanese-meaning');
+    const knownButtonEl = document.getElementById('known-button');
+    const unknownButtonEl = document.getElementById('unknown-button');
+    const nextButtonEl = document.getElementById('next-button');
+    const stopButtonEl = document.getElementById('stop-button');
+    const resetButtonEl = document.getElementById('reset-button');
+    const roundCounterEl = document.getElementById('round-counter');
+    const wordProgressEl = document.getElementById('word-progress');
+
+    // =======================================================
+    // 2. データ処理とヘルパー関数
+    // =======================================================
+
+    /**
+     * 配列をシャッフルする (Fisher-Yates)
+     */
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    /**
+     * TSV形式のテキストを単語オブジェクトの配列に変換する
+     */
+    function parseWordList(inputText) {
+        const lines = inputText
+            .trim()
+            .split('\n')
+            .filter(line => line.trim() !== '');
+
+        if (lines.length === 0) return [];
+
+        const parsedData = lines.map(line => {
+            const parts = line.split('\t');
+            if (parts.length < 2) {
+                console.warn("不正な行形式（タブ区切りではない）:", line);
+                return null; 
+            }
+            return {
+                english: parts[0].trim(), 
+                japanese: parts[1].trim(),
+                isKnown: false // 初期状態は「知らない」
+            };
+        }).filter(item => item !== null);
+
+        return parsedData;
+    }
+    
+    // =======================================================
+    // 3. 画面遷移と学習制御
+    // =======================================================
+
+    /**
+     * 画面を切り替える
+     */
+    function switchScreen(screenId) {
+        inputScreenEl.style.display = 'none';
+        flashcardScreenEl.style.display = 'none';
+        completionScreenEl.style.display = 'none';
+        document.getElementById(screenId).style.display = 'block';
+    }
+
+    /**
+     * 進捗状況表示を更新する (カウンター表示の修正部分)
+     */
+    function updateProgressDisplay() {
+        const unknownWordsInAll = allWords.filter(w => !w.isKnown).length;
+        const knownCount = totalWords - unknownWordsInAll;
+        
+        roundCounterEl.textContent = roundCount;
+        
+        // **【修正後の進捗表示】**
+        if (flashcardScreenEl.style.display !== 'none') {
+            const currentProgress = currentIndex + 1;
+            const roundTotal = currentDeck.length;
+            
+            // 例: 5/10 (習得済み: 35/45 語)
+            wordProgressEl.innerHTML = 
+                `${currentProgress}/${roundTotal} (習得済み: ${knownCount}/${totalWords} 語)`;
+        } else {
+            // 学習画面以外では、全体の習得状況のみを表示 (主にデバッグ用)
+             wordProgressEl.innerHTML = `${knownCount}/${totalWords} 語`;
+        }
+    }
+
+    /**
+     * 現在のカードを出題する
+     */
+    function displayCurrentCard() {
+        if (currentIndex >= currentDeck.length) {
+            // 全ての単語が出題し終わったら、次のラウンドの処理へ移行
+            checkRoundCompletion();
+            return;
+        }
+
+        const currentWord = currentDeck[currentIndex];
+
+        // 1. 英単語を画面に表示
+        englishWordEl.textContent = currentWord.english;
+        japaneseMeaningEl.textContent = currentWord.japanese;
+        
+        // 2. 画面の状態を回答可能にリセット
+        japaneseMeaningEl.style.display = 'none';
+        knownButtonEl.style.display = 'inline-block';
+        unknownButtonEl.style.display = 'inline-block';
+        nextButtonEl.style.display = 'none';
+
+        // 3. ステータスを更新
+        updateProgressDisplay();
+    }
+
+    /**
+     * ラウンドの完了をチェックし、次のラウンドに進むか学習を終了する
+     */
+    function checkRoundCompletion() {
+        // 全単語の中から、isKnown: false（知らない）の単語を抽出
+        const unknownWords = allWords.filter(word => word.isKnown === false);
+        
+        if (unknownWords.length === 0) {
+            // 学習終了
+            switchScreen('completion-screen');
+            return;
+        }
+
+        // 次のラウンドへ移行
+        roundCount++;
+        currentDeck = unknownWords; // 知らない単語だけを次のデッキにする
+        currentIndex = 0;
+        shuffleArray(currentDeck);
+        
+        // 次のラウンドの最初の単語を出題
+        displayCurrentCard();
+    }
+
+    // =======================================================
+    // 4. イベントハンドラ
+    // =======================================================
+
+    /**
+     * 学習開始ボタンの処理
+     */
+    startButtonEl.addEventListener('click', () => {
+        const parsedData = parseWordList(wordInputEl.value);
+        
+        if (parsedData.length === 0) {
+            alert("有効な単語が入力されていません。形式を確認してください。");
+            return;
+        }
+
+        allWords = parsedData;
+        totalWords = allWords.length;
+        roundCount = 1;
+        currentIndex = 0;
+        
+        currentDeck = [...allWords]; // 最初のラウンドは全単語
+        shuffleArray(currentDeck);
+
+        switchScreen('flashcard-screen');
+        displayCurrentCard();
+    });
+
+    /**
+     * 「知っている」ボタンの処理
+     */
+    knownButtonEl.addEventListener('click', () => {
+        // ステータスを「知っている」に設定
+        currentDeck[currentIndex].isKnown = true;
+        
+        // 即座に次の単語へ
+        currentIndex++;
+        displayCurrentCard();
+    });
+
+    /**
+     * 「知らない」ボタンの処理
+     */
+    unknownButtonEl.addEventListener('click', () => {
+        // ステータスを「知らない」に設定
+        currentDeck[currentIndex].isKnown = false; 
+        
+        // 訳語を表示し、ボタンを「次へ」に切り替える
+        japaneseMeaningEl.style.display = 'block';
+        knownButtonEl.style.display = 'none';
+        unknownButtonEl.style.display = 'none';
+        nextButtonEl.style.display = 'inline-block';
+    });
+
+    /**
+     * 「次へ」ボタンの処理（知らない単語の訳語確認後）
+     */
+    nextButtonEl.addEventListener('click', () => {
+        // 次の単語へ
+        currentIndex++;
+        displayCurrentCard();
+    });
+
+    /**
+     * 停止ボタン、リセットボタンの処理（入力画面へ戻る）
+     */
+    function resetAndStop() {
+        // 全ての学習データをリセット
+        allWords = [];
+        currentDeck = [];
+        currentIndex = 0;
+        roundCount = 0;
+        totalWords = 0;
+        
+        // 画面を入力画面に戻す
+        switchScreen('input-screen');
+        wordInputEl.value = ''; // 入力エリアをクリア
+    }
+
+    stopButtonEl.addEventListener('click', resetAndStop);
+    resetButtonEl.addEventListener('click', resetAndStop);
+
+    // アプリ起動時の初期画面設定
+    switchScreen('input-screen');
+
+</script>
+</body>
+</html>
